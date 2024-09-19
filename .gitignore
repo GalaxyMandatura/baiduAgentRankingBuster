@@ -1,0 +1,4 @@
+.idea
+.env
+cookies/baidu/*.json
+__pycache__
