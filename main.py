@@ -57,12 +57,20 @@ def get_authorized_accounts_options(authorized_status: dict[str, str] = None) ->
     return [f"{account}（{status}）" for account, status in authorized_accounts.items()]
 
 
-def do_brush_rank(agent_url: str, accounts: list[str], silent: bool):
+def split_batches(accounts, batch_size):
+    for i in range(0, len(accounts), batch_size):
+        yield accounts[i:i + batch_size]
+
+
+def do_brush_rank(agent_url: str, accounts: list[str], batch_size: int, silent: bool):
     try:
-        app = BaiduAgentChatBusterForMDB(accounts)
-        asyncio.run(app.main(agent_url, silent), debug=True)
+        for batch in split_batches(accounts, batch_size):
+            print(f"当前处理批次: {batch}")
+            app = BaiduAgentChatBusterForMDB(batch)
+            asyncio.run(app.main(agent_url, silent), debug=True)
     except Exception as e:
         return f"出错啦:\n{e}"
+
     return "任务执行完毕!"
 
 
@@ -80,7 +88,7 @@ def on_authorization_click(account: str):
     yield gr.update(interactive=True), result
 
 
-def on_brush_rank_click(agent_url, accounts, silent=False):
+def on_brush_rank_click(agent_url: str, accounts: list[str], batch_size: int, silent=False):
     if not accounts:
         yield gr.update(interactive=True), "请选择已经授权的账号"
         return
@@ -89,7 +97,7 @@ def on_brush_rank_click(agent_url, accounts, silent=False):
         return
     accounts = [re.search(r'\d{11}', account).group() for account in accounts]
     yield gr.update(interactive=False), "任务正在执行..."
-    result = do_brush_rank(agent_url, accounts, silent)
+    result = do_brush_rank(agent_url, accounts, batch_size, silent)
     yield gr.update(interactive=True), result
 
 
@@ -144,11 +152,12 @@ with gr.Blocks() as demo:
 
             agent_url_textbox = gr.Textbox(label="智能体地址",
                                            placeholder="请输入正难题的地址，如：https://mbd.baidu.com/ma/s/cAXZgRZK")
+            batch_size_slider = gr.Slider(minimum=1, maximum=50, step=1, value=5, label="并发数")
             silent_model = gr.Checkbox(label="静默模式", value=False)
             brush_rank_click_button = gr.Button("开刷！！！开刷(*^▽^*)")
             brush_rank_output_text = gr.Textbox(label="开刷输出")
             brush_rank_click_button.click(fn=on_brush_rank_click,
-                                          inputs=[agent_url_textbox, account_list, silent_model],
+                                          inputs=[agent_url_textbox, account_list, batch_size_slider, silent_model],
                                           outputs=[brush_rank_click_button, brush_rank_output_text])
 
 demo.launch(share=False)
