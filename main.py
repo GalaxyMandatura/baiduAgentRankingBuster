@@ -125,7 +125,7 @@ with gr.Blocks() as demo:
         with gr.Column():
             gr.Markdown("### 百度账号授权")
             account_textbox = gr.Textbox(label="百度账号(手机号)",
-                                         placeholder="请输入正难题百度账号，如：18610807044")
+                                         placeholder="请输入正难题百度账号，如：186****7044")
             with gr.Row():
                 authorization_button = gr.Button("增加百度账号授权", scale=10)
                 check_authorization_button = gr.Button("检测授权状态", scale=5)  # Add a smaller button
