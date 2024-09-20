@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 from pathlib import Path
 
 import gradio as gr
@@ -56,8 +57,7 @@ def get_authorized_accounts_options(authorized_status: dict[str, str] = None) ->
     return [f"{account}（{status}）" for account, status in authorized_accounts.items()]
 
 
-def do_brush_rank(agent_url: str, silent: bool):
-    accounts = ['18610807044', '13271557189', '13523079221', '13526609822', '16638075731']
+def do_brush_rank(agent_url: str, accounts: list[str], silent: bool):
     try:
         app = BaiduAgentChatBusterForMDB(accounts)
         asyncio.run(app.main(agent_url, silent), debug=True)
@@ -80,12 +80,16 @@ def on_authorization_click(account: str):
     yield gr.update(interactive=True), result
 
 
-def on_brush_rank_click(agent_url, silent):
+def on_brush_rank_click(agent_url, accounts, silent=False):
+    if not accounts:
+        yield gr.update(interactive=True), "请选择已经授权的账号"
+        return
     if not agent_url:
         yield gr.update(interactive=True), "智能体地址不能为空"
         return
+    accounts = [re.search(r'\d{11}', account).group() for account in accounts]
     yield gr.update(interactive=False), "任务正在执行..."
-    result = do_brush_rank(agent_url, silent)
+    result = do_brush_rank(agent_url, accounts, silent)
     yield gr.update(interactive=True), result
 
 
@@ -143,7 +147,8 @@ with gr.Blocks() as demo:
             silent_model = gr.Checkbox(label="静默模式", value=False)
             brush_rank_click_button = gr.Button("开刷！！！开刷(*^▽^*)")
             brush_rank_output_text = gr.Textbox(label="开刷输出")
-            brush_rank_click_button.click(fn=on_brush_rank_click, inputs=[agent_url_textbox, silent_model],
+            brush_rank_click_button.click(fn=on_brush_rank_click,
+                                          inputs=[agent_url_textbox, account_list, silent_model],
                                           outputs=[brush_rank_click_button, brush_rank_output_text])
 
 demo.launch(share=False)
